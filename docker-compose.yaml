@@ -1,31 +1,29 @@
 version: '3.7'
 
 services:
-  postgres:
-    image: postgres:13
-    container_name: postgres
+  neo4j:
+    image: neo4j:4.4.12
+    container_name: neo4j
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      NEO4J_AUTH: neo4j/testpassword
     ports:
-      - "5432:5432"
+      - "7474:7474"  # Browser UI
+      - "7687:7687"  # Bolt protocol
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - neo4j_data:/data
 
   airflow:
     image: apache/airflow:2.7.0
     container_name: airflow
     depends_on:
-      - postgres
+      - neo4j
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: sqlite:////usr/local/airflow/airflow.db
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "true"
       AIRFLOW__CORE__FERNET_KEY: "your_fernet_key" # Replace with your fernet key
       AIRFLOW__WEBSERVER__SECRET_KEY: "your_secret_key" # Replace with your secret key
-      AIRFLOW__WEBSERVER__WEB_SERVER_HOST: 0.0.0.0
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -34,19 +32,16 @@ services:
       - "8080:8080"
     entrypoint: ["airflow", "standalone"]
 
-  grafana:
-    image: grafana/grafana:10.2.3
-    container_name: grafana
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
     depends_on:
-      - postgres
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - neo4j
     ports:
       - "3000:3000"
     volumes:
-      - grafana_data:/var/lib/grafana
+      - metabase_data:/metabase-data
 
 volumes:
-  postgres_data:
-  grafana_data:
+  neo4j_data:
+  metabase_data:
